@@ -46,7 +46,7 @@ public class GameManager : MonoBehaviour
     {
         
 
-        if (Input.GetKeyDown(KeyCode.Space) && GameOver == false  && !UIManager.Instance.OpenMenu) {
+        if ((Input.GetKeyDown(KeyCode.Space) || (Input.GetMouseButtonDown(0)) && GameOver == false  && !UIManager.Instance.OpenMenu)) {
 
 
             if (TutorText.gameObject.activeInHierarchy && gameStarted == true )
@@ -137,7 +137,7 @@ public class GameManager : MonoBehaviour
         if ( deltaX <= 0.1f && deltaZ <= 0.1f)
         {
             Strike += 1;
-            Debug.Log("Strike"+Strike);
+          //  Debug.Log("Strike"+Strike);
             overlappedPart = CubePooling.instance.GetCubeFromPool();
             overlappedPart.transform.localScale = new Vector3(
                 cAbove.transform.localScale.x,

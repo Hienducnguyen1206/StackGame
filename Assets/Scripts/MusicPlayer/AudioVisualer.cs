@@ -1,8 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using UnityEngine;
 using TMPro;
-using Unity.VisualScripting;
-using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 public class AudioVisualizer : MonoBehaviour
 {
@@ -12,15 +11,22 @@ public class AudioVisualizer : MonoBehaviour
 
     public List<AudioClip> musicList;
     public Slider VolumeSlider;
-    private int musicIndex ; 
 
-    private float[] spectrumData = new float[64];
+    private int musicIndex;
+    private float[] outputData = new float[256];
     private bool musicPlaying = true;
 
     private void Start()
-    {   
+    {
+        if (audioSource == null || musicList == null || musicList.Count == 0)
+        {
+            Debug.LogError("AudioSource hoặc danh sách nhạc chưa được thiết lập.");
+            return;
+        }
+
         RandomMusic();
-        VolumeSlider.value = 1;
+        VolumeSlider.value = audioSource.volume;
+
         float centerOffset = (bars.Length - 1) / 2f;
         float spacing = 0.5f;
 
@@ -32,88 +38,73 @@ public class AudioVisualizer : MonoBehaviour
     }
 
     private void Update()
-    {  
-        audioSource.volume = VolumeSlider.value;
-        musicname.text = audioSource.clip.name;
-        audioSource.GetSpectrumData(spectrumData, 0, FFTWindow.BlackmanHarris);
-        int spectrumLength = spectrumData.Length / 2;
-        for (int i = 0; i < bars.Length / 2; i++)
-        {
-            float frequencyDataLeft = spectrumData[i];
-            float frequencyDataRight = spectrumData[spectrumLength - i - 1];
+    {
+        if (bars == null || bars.Length == 0 || outputData.Length < bars.Length)
+            return;
 
-            bars[i].localScale = new Vector3(1, Mathf.Clamp(frequencyDataLeft * 10, 0.3f, 5f), 1);
-            bars[bars.Length - i - 1].localScale = new Vector3(1, Mathf.Clamp(frequencyDataRight * 10, 0.3f, 5f), 1);
+        audioSource.volume = VolumeSlider.value;
+
+        if (musicname.text != audioSource.clip.name)
+        {
+            musicname.text = audioSource.clip.name;
         }
 
-        if ( audioSource != null)
+        // Sử dụng GetOutputData thay vì GetSpectrumData
+        audioSource.GetOutputData(outputData, 0);
+
+        for (int i = 0; i < bars.Length; i++)
         {
-          if(!audioSource.isPlaying && musicPlaying)
-            {   
-                NextMusic();
-            }
-           
+            float frequencyData = outputData[i] * 10; // Áp dụng một hệ số để tăng cường độ cao
+            bars[i].localScale = new Vector3(1, Mathf.Clamp(frequencyData, 0.3f, 5f), 1);
+        }
+
+        if (!audioSource.isPlaying && musicPlaying)
+        {
+            NextMusic();
         }
     }
 
     public void NextMusic()
     {
-        if (musicIndex + 1 < musicList.Count)
-        {   
-            audioSource.clip = musicList[musicIndex + 1];
-            audioSource.Play();
-            musicIndex++;
-        }
-        else
-        {
-            audioSource.clip = musicList[0];
-            audioSource.Play();
-            musicIndex = 0;
-        }
+        musicIndex = (musicIndex + 1) % musicList.Count;
+        audioSource.clip = musicList[musicIndex];
+        audioSource.Play();
     }
 
-    public void PreviousMusic() {
-        if (musicIndex - 1 >= 0 )
-        {
-            audioSource.clip = musicList[musicIndex-1];
-            audioSource.Play();
-            musicIndex--;
-        }
-        else
-        {
-            audioSource.clip = musicList[musicList.Count-1];
-            audioSource.Play();
-            musicIndex = musicList.Count -1;
-        }
+    public void PreviousMusic()
+    {
+        musicIndex = (musicIndex - 1 + musicList.Count) % musicList.Count;
+        audioSource.clip = musicList[musicIndex];
+        audioSource.Play();
     }
 
-    public void PlayMusic() {
-        if (musicPlaying == false)
-        {   
-           
-            audioSource.Play();
-            musicPlaying = true;
-        }
-        else
+    public void PlayMusic()
+    {
+        if (musicPlaying)
         {
-            
             audioSource.Pause();
-            musicPlaying = false;
         }
+        else
+        {
+            audioSource.Play();
+        }
+        musicPlaying = !musicPlaying;
     }
-
-   
 
     public void RandomMusic()
     {
-        musicIndex = Random.Range(0, musicList.Count);
+        int previousIndex = musicIndex;
+        do
+        {
+            musicIndex = Random.Range(0, musicList.Count);
+        } while (musicIndex == previousIndex);
+
         audioSource.clip = musicList[musicIndex];
         audioSource.Play();
     }
 
     public void LoopMusic()
     {
-        audioSource.loop = true;
+        audioSource.loop = !audioSource.loop;
     }
-
 }
